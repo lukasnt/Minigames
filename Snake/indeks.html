@@ -1,0 +1,265 @@
+<html>
+	
+	<head>
+		<title> Snake </title>
+		<meta charset="utf-8"/>
+		<canvas id="cnv" width="800" height="600"> </canvas>
+	</head>
+	
+	<body>
+		
+	</body>
+	
+	<style>
+		
+	</style>
+	
+	<script>
+		window.onload = oppstart;
+		
+		var ctx = document.getElementById("cnv").getContext("2d");
+		document.addEventListener("keydown", tastetrykk);
+		document.addEventListener("keyup", tasteslipp);
+		
+		var tasteKoder = [];
+		
+		
+		var rutenettListe = [];
+		var ruter = 16;
+		var ruterY = (ctx.canvas.height / ctx.canvas.width) * ruter;
+		var str = ctx.canvas.width / ruter;
+		
+		
+		var spiller = {
+			ruteX: 2,
+			ruteY: 2,
+			fart: 6,
+			fartTeller: 0,
+			retning: 0,
+			forrigeRetning: 1,
+			hale: [],
+			startLengde: 1
+		};
+		
+		var tegneTeller = 0;
+		var fps = 100;
+		
+		// Antall frames per bevegelse
+		var fpb = Math.floor(fps/spiller.fart);
+		
+		// Kjører tegne funksjonen 100 ganger per sekund.
+		setInterval(tegne, 1000/fps);
+		
+		var eplet = {
+			ruteX: 5,
+			ruteY: 5
+		};
+		
+		function oppstart() {
+			for(var i = 0; i < spiller.startLengde; i++){
+				spiller.hale[i] = {x: spiller.ruteX - i, y: spiller.ruteY, x1: spiller.ruteX - i - 1, y1: spiller.ruteY};
+			}
+		}
+		
+		function tegne(){
+			
+			oppdaterSpiller();
+			
+			bakgrunn();
+			//rutenett();
+			tegneSpiller();
+			tegneEplet();
+			
+			ctx.beginPath();
+			ctx.fillStyle = "#ffffff";
+			ctx.font = "32px Arial Center";
+			ctx.fillText("Score: " + spiller.hale.length, 20, 30);
+			ctx.stroke();
+		}
+		
+		function tegneSpiller(){
+			// Tegner slangen og alle delene av halen
+			// Hvert element i hale-arrayet har x og y posisjon (rutenett) og forrige x og y posisjon
+			// Tegner kulene gradvis fra den forrige posisjonen til den nåværende posisjonen,
+			// (har en teller variabel som legges til være frame og en variabel for antall frames per bevegelse)
+			
+			for(var i = 0; i < spiller.hale.length; i++){
+				// Endringen i posisjonen
+				var dx = spiller.hale[i].x - spiller.hale[i].x1;
+				var dy = spiller.hale[i].y - spiller.hale[i].y1;
+				
+				// Start posisjonen den beveger seg fra
+				var startX = spiller.hale[i].x1 * str + 1/2 * str;
+				var startY = spiller.hale[i].y1 * str + 1/2 * str;
+				
+				// posisjonene i pikselen på canvas
+				var x = startX + (tegneTeller/fpb) * str * dx;
+				var y = startY + (tegneTeller/fpb) * str * dy;
+				
+				if(i === 0){ // Når det ikke er hode på halen som tegnes (Hodet er det første element i arrayet)
+					ctx.fillStyle = "#ffffff";
+					ctx.strokeStyle = "#000000";
+				}else{ // Hode på halen skal ha annen farge
+					ctx.fillStyle = "#ff00ff";
+					ctx.strokeStyle = "#000000";
+				}
+				
+				// Tegner den delen av halen (en sirkel)
+				ctx.beginPath();
+				ctx.arc(x, y, str/2, 0, 2 * Math.PI);
+				ctx.fill();
+				ctx.stroke();				
+			}
+			
+			tegneTeller++;
+		}
+		
+		function tegneEplet(){
+			ctx.beginPath();
+			ctx.fillStyle = "#ff0000";
+			ctx.arc((eplet.ruteX + 1/2) * str, (eplet.ruteY + 1/2) * str, str/2, 0, 2 * Math.PI);
+			ctx.fill();
+		}
+		
+		function oppdaterSpiller(){
+			// Setter retningen ved tastetrykk (piltastene)
+			// Dette er tallene som representerer retningene:
+			// Venstre: 0
+			// Høyre: 1
+			// Opp: 2
+			// Ned: 3
+			if(tasteKoder[37]){
+				spiller.retning = 0;
+			}
+			else if(tasteKoder[38]){
+				spiller.retning = 2;
+			}
+			else if(tasteKoder[39]){
+				spiller.retning = 1;
+			}
+			else if(tasteKoder[40]){
+				spiller.retning = 3;
+			}
+			
+			// Dersom alle frames er ferdig beveger jeg slangen i retningen
+			if(spiller.fartTeller % fpb === 0){
+				bevegelse();
+			}
+			spiller.fartTeller++;
+			
+			// Sjekker om den kollidere med deler av halen
+			for(var i = 1; i < spiller.hale.length; i++){
+				var hale = spiller.hale[i];
+				if(spiller.ruteX === hale.x && spiller.ruteY === hale.y){
+					spiller.hale.splice(i, spiller.hale.length - i);
+				}
+			}
+			
+			// Bergener slik at de kan komme til andre siden
+			if(spiller.ruteX >= ruter+1){
+				spiller.ruteX = 0
+				spiller.hale[0].x = 0;
+				spiller.hale[0].x1 = -1;
+			}
+			if(spiller.ruteX < 0 - 1){
+				spiller.ruteX = ruter - 1;
+				spiller.hale[0].x = ruter - 1;
+				spiller.hale[0].x1 = ruter;
+			}
+			if(spiller.ruteY >= ruterY+1){
+				spiller.ruteY = 0
+				spiller.hale[0].y = 0;
+				spiller.hale[0].y1 = -1;
+			}
+			if(spiller.ruteY < 0 - 1){
+				spiller.ruteY = ruterY - 1;
+				spiller.hale[0].y = ruterY - 1;
+				spiller.hale[0].y1 = ruterY;
+			}
+		}
+		
+		function bevegelse(){
+			if(Math.floor(spiller.retning / 2) === Math.floor(spiller.forrigeRetning / 2)){
+				spiller.retning = spiller.forrigeRetning;
+			}
+			spiller.forrigeRetning = spiller.retning;
+			
+			if(spiller.retning === 1){
+				flytt(1,0);
+			}
+			if(spiller.retning === 0){
+				flytt(-1,0);
+			}
+			if(spiller.retning === 2){
+				flytt(0,-1);
+			}
+			if(spiller.retning === 3){
+				flytt(0,1);
+			}
+			
+			if(spiller.ruteX === eplet.ruteX && spiller.ruteY === eplet.ruteY){
+				eplet.ruteX = Math.floor(Math.random() * ruter);
+				eplet.ruteY = Math.floor(Math.random() * ruterY);
+				
+				var siste = spiller.hale[spiller.hale.length - 1];
+				spiller.hale.push({x: siste.x1, y: siste.y1, x1: siste.x1 + 1, y1: siste.y1 + 1});
+				
+			}
+		}
+		
+		function flytt(x, y){
+			// forskyver alle kulene av halen
+			for(var i = spiller.hale.length - 1; i > 0; i--){
+				spiller.hale[i].x = spiller.hale[i - 1].x;
+				spiller.hale[i].y = spiller.hale[i - 1].y;
+				spiller.hale[i].x1 = spiller.hale[i - 1].x1;
+				spiller.hale[i].y1 = spiller.hale[i - 1].y1;
+			}
+			
+			// Legger til x og y til posisjon og forrige posisjon
+			spiller.hale[0].x1 = spiller.hale[0].x;
+			spiller.hale[0].y1 = spiller.hale[0].y;
+			spiller.hale[0].x += x;
+			spiller.hale[0].y += y;
+			
+			
+			spiller.ruteX += x;
+			spiller.ruteY += y;
+			
+			tegneTeller = 0;
+		}
+		
+		function rutenett(){
+			for(var y = 0; y < ruter; y++){
+				for(var x = 0; x < ruter; x++){
+					ctx.beginPath();
+					ctx.rect(x * str, y * str, str, str);
+					ctx.strokeStyle = "#ffffff";
+					ctx.stroke();
+				}
+			}
+		}
+		
+		function bakgrunn(){
+			ctx.beginPath();
+			ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+			ctx.fillStyle = "#000000";
+			ctx.fill();
+			ctx.stroke();
+		}
+		
+		function generer(){
+			
+		}
+		
+		function tastetrykk(e){
+			tasteKoder[e.keyCode] = true;
+		}
+		
+		function tasteslipp(e){
+			tasteKoder[e.keyCode] = false;
+		}
+		
+	</script>
+	
+</html>
